@@ -98,17 +98,34 @@ have Windows user names with spaces in them, so a heads-up there...)
 
 ```bash
 cd /cygdrive/f/src/mono/mono-3.4.0
+cd libgc
+wget https://raw.githubusercontent.com/mono/mono/mono-3.4.0/libgc/autogen.sh
+cd /cygdrive/f/src/mono/mono-3.4.0
 ./autogen.sh --prefix="F:\bin\Mono" --with-preview=yes > autogenlog.txt 2>&1 
 ```
 
 I could not see an autogen.sh in the libgc directory. 
 
+### A fix for cross-platform compilation only?
+
+I tried the following, but I don't think this is really helping. However I do end up, with or without it, with mono*-wrapper with references to a non-existing /-libtool script at the root of the directory.  
+
+If I follow the following instructions between the autogen.sh and ./configure:
 ```
 sed -e "s|slash\}libtool|slash\}${HOST_SYS}-libtool|" -i acinclude.m4
 sed -e "s|slash\}libtool|slash\}../${HOST_SYS}-libtool|" -i libgc/acinclude.m4
 sed -e "s|slash\}libtool|slash\}../${HOST_SYS}-libtool|" -i eglib/acinclude.m4
 sed -e "s|r/libtool|r/${HOST_SYS}-libtool|" -i runtime/mono-wrapper.in
 sed -e "s|r/libtool|r/${HOST_SYS}-libtool|" -i runtime/monodis-wrapper.in
+```
+Then  at compilation time:
+```
+Converting corlib.dll.sources to ../../build/deps/build_corlib.dll.response ...
+mkdir -p -- ../../class/lib/build/tmp/
+MCS     [build] mscorlib.dll
+/cygdrive/f/src/mono/mono-3.4.0/runtime/mono-wrapper: line 16: /cygdrive/f/src/m
+ono/mono-3.4.0/-libtool: No such file or directory
+/cygdrive/f/src/mono/mono-3.4.0/runtime/mono-wrapper: line 16: exec: /cygdrive/f
 ```
 
 ### Configure the build
@@ -122,16 +139,19 @@ checking if dolt supports this host... no, falling back to libtool
 ./configure: line 17238: ./libtool: No such file or directory
 ```
 
+The above is because there was a missing autogen.sh in libgc. Maybe. Who knows.
+
 ```
 checking for iconv... no, consider installing GNU libiconv
 ```
-Huh??
+Huh?? Not sure what is going on, not sure how much this matter. Just go on.
 
 
-Note that this step completes fine at this stage, but I noticed that if I started from a clone of the repo done with [Sourcetree](http://www.sourcetreeapp.com), I first had issues with autoconf, then failed confituration of libgc and eglib (as reported by Mark in XXXX)
+Note that this step completes fine at this stage, but I noticed that if I started from a clone of the repo done with [Sourcetree](http://www.sourcetreeapp.com), I first had issues with autoconf, then failed configuration of libgc and eglib (as reported by Mark in XXXX)
 
 At the end of this process, with the defaults, you should see something like
 
+```
         mcs source:    mcs
 
    Engine:
@@ -155,20 +175,17 @@ parallel mark
         JNI support:   no
         libgdiplus:    assumed to be installed
         zlib:          system zlib
+```
 
-### We're ready to build mono
+### Building mono
 
 ```bash
 which mcs
 # /cygdrive/f/bin/Mono/bin/mcs
 ```
 
+If you have not manually placed the autogen.sh file under libgc, you will quickly get:
 
-```
-make
-```
-
-If you have not manually placed the autogen.sh file under libgc:
 ```
 make[3]: Entering directory `/cygdrive/f/src/mono/mono-3.4.0/libgc'
   CC     allchblk.lo
@@ -181,7 +198,6 @@ cygwin warning:
 += -DPACKAGE_NAME=/"libgc-mono/"
   CYGWIN environment variable option "nodosfilewarning" turns off this warning.
   Consult the user's guide for more details about POSIX paths:
-  
 ```
 
 ```
@@ -213,40 +229,25 @@ A workaround is to edit the Cygwin header file ntapi.h (e.g.
 C:\cygwin\usr\i686-pc-mingw32\sys-root\mingw\include\ddk\ntapi.h) to
 rename PEXECUTION_STATE to PEXECUTION_STATE_KLUDGE, say.
 
-Then,
+Then, we are finally ready to launch the compilation
 
-make
+```
+make > make_log.txt 2>&1
+```
 
-(this will take some time )
+this will take some time
 
 NOTE: There seems to be an intermittent issue linking against libiconv
 (even when present) relating to shared libraries.
 
 If you see this try,
 
+```
 make clean
 make
-
-
-```
-Converting corlib.dll.sources to ../../build/deps/build_corlib.dll.response ...
-mkdir -p -- ../../class/lib/build/tmp/
-MCS     [build] mscorlib.dll
-/cygdrive/f/src/mono/mono-3.4.0/runtime/mono-wrapper: line 16: /cygdrive/f/src/m
-ono/mono-3.4.0/-libtool: No such file or directory
-/cygdrive/f/src/mono/mono-3.4.0/runtime/mono-wrapper: line 16: exec: /cygdrive/f
-/src/mono/mono-3.4.0/-libtool: cannot execute: No such file or directory
-../../build/library.make:263: recipe for target '../../class/lib/build/tmp/mscor
-lib.dll' failed
-make[8]: *** [../../class/lib/build/tmp/mscorlib.dll] Error 126
-../../build/rules.make:143: recipe for target 'do-all' failed
-make[7]: *** [do-all] Error 2
-../build/rules.make:164: recipe for target 'all-recursive' failed
-make[6]: *** [all-recursive] Error 1
-build/rules.make:164: recipe for target 'all-recursive' failed
 ```
 
-(vi) Install mono
+### Install mono
 
 Mount your destination folder under Cygwin as /usr/local with
 
@@ -259,8 +260,6 @@ step or you will see the following build error:
 
 As a check you can 'ls /usr/local' which should show the files that you
 have in F:\bin\Mono
-
-...
 
 At the time of writing (04/05/2014) there is a missing file in the Mono
 3.4.0 release tarball. This causes installation failure.
