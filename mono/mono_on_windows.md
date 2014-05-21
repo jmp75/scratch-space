@@ -232,13 +232,55 @@ rename PEXECUTION_STATE to PEXECUTION_STATE_KLUDGE, say.
 Then, we are finally ready to launch the compilation
 
 ```
-make > make_log.txt 2>&1
+time make > make_log.txt 2>&1
 ```
 
 this will take some time
 
 NOTE: There seems to be an intermittent issue linking against libiconv
 (even when present) relating to shared libraries.
+
+```
+mono-counters.c: In function 'dump_counter':
+mono-counters.c:113:8: warning: unknown conversion type character 'l' in format [-Wformat]
+mono-counters.c:113:8: warning: too many arguments for format [-Wformat-extra-args]
+
+sgen-gc.c: In function 'pin_objects_from_addresses':
+sgen-gc.c:1283:6: warning: unknown conversion type character 'z' in format [-Wformat]
+
+  CC     decode.o
+decode.c: In function ‘tracked_creation’:
+decode.c:1434:3: warning: unknown conversion type character ‘l’ in format [-Wformat]
+decode.c:1434:3: warning: format ‘%f’ expects argument of type ‘double’, but argument 5 has type ‘uint64_t’ [-Wformat]
+decode.c:1434:3: warning: too many arguments for format [-Wformat-extra-args]
+```
+
+A [thread on StackOverflow](http://stackoverflow.com/questions/10678124/mingw-gcc-unknown-conversion-type-character-h-snprintf) gives some background as to these issues in relation to gcc and mingw.
+
+note the --without-libiconv-prefix configure, below; not sure whether this is as should be or not.
+```
+$ i686-pc-mingw32-gcc -v
+Using built-in specs.
+COLLECT_GCC=i686-pc-mingw32-gcc
+COLLECT_LTO_WRAPPER=/usr/lib/gcc/i686-pc-mingw32/4.7.3/lto-wrapper.exe
+Target: i686-pc-mingw32
+Configured with: /usr/src/packages/mingw-gcc/32/mingw-gcc-4.7.3-1/src/gcc-4.7.3/
+configure --srcdir=/usr/src/packages/mingw-gcc/32/mingw-gcc-4.7.3-1/src/gcc-4.7.
+3 --prefix=/usr --exec-prefix=/usr --bindir=/usr/bin --sbindir=/usr/sbin --libex
+ecdir=/usr/lib --datadir=/usr/share --localstatedir=/var --sysconfdir=/etc --dat
+arootdir=/usr/share --docdir=/usr/share/doc/mingw-gcc -C --build=i686-pc-cygwin
+--host=i686-pc-cygwin --target=i686-pc-mingw32 --without-libiconv-prefix --witho
+ut-libintl-prefix --with-sysroot=/usr/i686-pc-mingw32/sys-root --with-build-sysr
+oot=/usr/i686-pc-mingw32/sys-root --enable-languages=c,c++,ada,fortran,objc,obj-
+c++ --disable-sjlj-exceptions --with-dwarf2 --enable-shared --enable-libgomp --d
+isable-win32-registry --enable-libstdcxx-debug --disable-build-poststage1-with-c
+xx --enable-version-specific-runtime-libs --disable-multilib --enable-decimal-fl
+oat=bid --disable-werror --enable-lto
+Thread model: win32
+gcc version 4.7.3 (GCC)
+```
+
+
 
 If you see this try,
 
@@ -264,22 +306,25 @@ have in F:\bin\Mono
 At the time of writing (04/05/2014) there is a missing file in the Mono
 3.4.0 release tarball. This causes installation failure.
 
-ref:
-http://stackoverflow.com/questions/22844569/build-error-mono-3-4-0-centos
+[post on stackoverflow](http://stackoverflow.com/questions/22844569/build-error-mono-3-4-0-centos)
 
 To add the missing file create a new file in  mcs/tools/xbuild/targets/
 called Microsoft.Portable.Common.targets
 
 This should contain the following
 
-<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-<Import Project="..\Microsoft.Portable.Core.props" />
-<Import Project="..\Microsoft.Portable.Core.targets" />
-</Project>
+```bash
+echo "<Project xmlns=\"http://schemas.microsoft.com/developer/msbuild/2003\">
+    <Import Project=\"..\Microsoft.Portable.Core.props\" />
+    <Import Project=\"..\Microsoft.Portable.Core.targets\" />
+</Project>" > mcs/tools/xbuild/targets/Microsoft.Portable.Common.targets
+```
 
 Then ensure that /usr/local is correctly mounted as per 3(b)(ii) and run
 
+```bash
 make install
+```
 
 (vii) Fix "missing" mono.exe
 
@@ -407,3 +452,49 @@ Copy across mono.exe to bin folder from older installation
 Delete mono file in bin folder
 
 There's an archive of binaries for 3.4.10-master-47db8f7 here
+
+# Building mono with MS VC++ VS2013
+
+You should first build mono using the configure/make process. It seems to generate some header files that you'll otherwise be missing. 
+F:\src\mono\mono-3.4.0\msvc\mono.sln
+
+Libraries\libmono
+
+```
+Error	3891	error LNK2019: unresolved external symbol _mono_emit_native_types_intrinsics referenced in function _mini_emit_inst_for_ctor	F:\src\mono\mono-3.4.0\msvc\method-to-ir.obj	libmono
+Error	3889	error LNK2019: unresolved external symbol _mini_native_type_replace_type referenced in function _mini_replace_type	F:\src\mono\mono-3.4.0\msvc\mini.obj	libmono
+Error	3890	error LNK2001: unresolved external symbol _mini_native_type_replace_type	F:\src\mono\mono-3.4.0\msvc\mini-generic-sharing.obj	libmono
+Error	3892	error LNK1120: 2 unresolved externals	F:\src\mono\mono-3.4.0\msvc\Win32\bin\mono-2.0.dll	libmono
+```
+
+```xml
+    <ClInclude Include="..\mono\mini\mini-llvm.h" />
+    <ClInclude Include="..\mono\mini\mini-llvm-cpp.h" />
+    <ClCompile Include="..\mono\mini\mini-native-types.c" />
+  </ItemGroup>
+```
+
+F:\src\mono\mono-3.4.0\msvc\Win32\bin
+
+to
+
+F:\bin\mono_built\Win32
+
+lib
+	mono-2.0.lib
+	mono
+		gac
+		2.0
+		3.5
+		4.0
+		4.5
+
+F:\bin\Mono\lib\mono
+
+
+# Generating the csproj/sln files
+
+
+
+
+
