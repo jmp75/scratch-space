@@ -1,0 +1,6 @@
+cd F:\src\github_jm
+R CMD build Rcpp
+R CMD INSTALL Rcpp_0.11.5.tar.gz
+cp Rcpp\src\Debug\Rcpp.dll f:\Rlib\Rcpp\libs\i386\
+cp Rcpp\src\x64\Debug\Rcpp.dll f:\Rlib\Rcpp\libs\x64\
+
