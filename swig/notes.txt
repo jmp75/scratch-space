@@ -1,0 +1,42 @@
+g++ -fpic -c mylib.cpp -o mylib.o
+g++ -shared -o libmylib.so mylib.o
+#nm libmylib.so 
+
+swig3.0 -c++ -python example.i 
+g++ --std=c++11 -fpic -c example_wrap.cxx `pkg-config --cflags python3`
+g++ -shared -o _mylibwrap.so example_wrap.o -lmylib
+
+python3
+
+from mylibwrap import *
+LibGetVecDouble()
+LibGetVariableIdentifiers();
+LibGetVecVecString();
+LibGetVecVecDouble();
+
+LibProcessString("aaa")
+LibProcessVecString(['a','b','c']);
+LibProcessVecVecDouble([range(5), range(6)])
+
+s = StringVector(3)
+s[0] = 'a'
+s[1] = 'b'
+s[2] = 'c'
+d = DoubleVector(3)
+d[0] = 1.0
+d[1] = 2.0
+d[2] = 3.0
+LibProcessVecString(s);
+LibProcessVecVecDouble([d,d])
+
+
+
+nm _mylibwrap.so  | less
+
+
+
+swig3.0 -c++ -python example.i 
+g++ --std=c++11 -fpic -c example_wrap.cxx `pkg-config --cflags python`
+g++ -shared -o _example.so example_wrap.o
+
+
