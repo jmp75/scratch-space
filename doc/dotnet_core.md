@@ -77,3 +77,5 @@ export DOTNET_CLI_TELEMETRY_OPTOUT=1
 
 and a top of a google search comes up with a blog from a guy I should get in touch with:
 [hosting coreclr](http://yizhang82.me/hosting-coreclr)
+
+[the Mono project has a section](http://www.mono-project.com/docs/advanced/coreclr-howto/)
